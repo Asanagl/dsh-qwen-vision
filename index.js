@@ -32,18 +32,22 @@ function readBody(req) {
   return new Promise((resolve, reject) => {
     const chunks = []
     let total = 0
-    req.on('data', (chunk) => {
+    let done = false
+    const onData = (chunk) => {
+      if (done) return
       total += chunk.length
       if (total > MAX_BYTES) {
+        done = true
+        req.removeListener('data', onData)
         const err = new Error('payload too large')
         err.code = 413
         reject(err)
-        req.destroy()
         return
       }
       chunks.push(chunk)
-    })
-    req.on('end', () => resolve(Buffer.concat(chunks)))
+    }
+    req.on('data', onData)
+    req.on('end', () => { if (!done) resolve(Buffer.concat(chunks)) })
     req.on('error', reject)
   })
 }
@@ -82,6 +86,7 @@ export function apply(ctx) {
           await writeFile(file, body)
           json(res, 200, { path: file })
         } catch (err) {
+          if (err?.code === 413) res.setHeader('Connection', 'close')
           json(res, err?.code === 413 ? 413 : 400, { error: String(err?.message ?? err) })
         }
       },
