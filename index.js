@@ -64,56 +64,59 @@ function json(res, status, payload) {
   res.end(JSON.stringify(payload))
 }
 
-export function apply(ctx) {
-  // Paste receiver route. Optional: skipped when this composition has no web server.
-  try {
-    const webServer = ctx.get('webServer')
-    webServer.register({
-      kind: 'exact',
-      path: '/qwen-vision/paste',
-      handler: async (req, res) => {
-        if (req.method !== 'POST') {
-          json(res, 405, { error: 'method not allowed' })
-          return
-        }
-        try {
-          const body = await readBody(req)
-          if (!body.length) throw new Error('empty body')
-          const mime = String(req.headers['content-type'] ?? '').split(';')[0].trim().toLowerCase()
-          const ext = EXT.get(mime) ?? '.png'
-          await mkdir(PASTE_DIR, { recursive: true })
-          const file = join(PASTE_DIR, `paste-${timestamp()}-${randomBytes(3).toString('hex')}${ext}`)
-          await writeFile(file, body)
-          json(res, 200, { path: file })
-        } catch (err) {
-          if (err?.code === 413) res.setHeader('Connection', 'close')
-          json(res, err?.code === 413 ? 413 : 400, { error: String(err?.message ?? err) })
-        }
-      },
-    })
-  } catch {
-    // No web server in this composition — the paste route simply stays absent.
+async function handlePaste(req, res) {
+  if (req.method !== 'POST') {
+    json(res, 405, { error: 'method not allowed' })
+    return
   }
 
-  // Image-vision skill. Optional: skipped when the skills registry is absent.
   try {
-    const skills = ctx.get('skills')
-    readFile(SKILL_PATH, 'utf8').then(
-      (content) => {
-        skills.register({
-          name: 'qwen-image-vision',
-          description:
-            'Answer questions about images the user pasted into the chat (paths under ~/.dsh/qwen-vision-paste), attached via drag-and-drop, referenced as local paths, or copied to the Windows clipboard. Route them to the qwen-mm-plugins-api MCP vision tools (vision_chat / ocr / grounding).',
-          whenToUse:
-            'User pastes or drags an image, mentions 看图 / 看截图 / 看剪贴板 / 图片, or references a local image path.',
-          content,
-        })
-      },
-      (err) => {
-        ctx.logger?.warn?.('dsh-qwen-vision: failed to read skill file', err)
-      },
-    )
-  } catch {
-    // No skills registry in this composition.
+    const body = await readBody(req)
+    if (!body.length) throw new Error('empty body')
+    const mime = String(req.headers['content-type'] ?? '').split(';')[0].trim().toLowerCase()
+    const ext = EXT.get(mime) ?? '.png'
+    await mkdir(PASTE_DIR, { recursive: true })
+    const file = join(PASTE_DIR, `paste-${timestamp()}-${randomBytes(3).toString('hex')}${ext}`)
+    await writeFile(file, body)
+    json(res, 200, { path: file })
+  } catch (err) {
+    if (err?.code === 413) res.setHeader('Connection', 'close')
+    json(res, err?.code === 413 ? 413 : 400, { error: String(err?.message ?? err) })
   }
+}
+
+const installPasteRoute = (ctx) => {
+  // Optional feature: a registration failure must not take the whole DSH down.
+  try {
+    return ctx.webServer.register({
+      kind: 'exact',
+      path: '/qwen-vision/paste',
+      handler: handlePaste,
+    })
+  } catch (err) {
+    ctx.logger?.warn?.('dsh-qwen-vision: failed to register paste route', err)
+  }
+}
+
+async function installImageSkill(ctx) {
+  try {
+    const content = await readFile(SKILL_PATH, 'utf8')
+    return ctx.skills.register({
+      name: 'qwen-image-vision',
+      source: 'bundled',
+      description:
+        'Answer questions about images the user pasted into the chat (paths under ~/.dsh/qwen-vision-paste), attached via drag-and-drop, referenced as local paths, or copied to the Windows clipboard. Route them to the qwen-mm-plugins-api MCP vision tools (vision_chat / ocr / grounding).',
+      whenToUse:
+        'User pastes or drags an image, mentions 看图 / 看截图 / 看剪贴板 / 图片, or references a local image path.',
+      content,
+    })
+  } catch (err) {
+    ctx.logger?.warn?.('dsh-qwen-vision: failed to register image skill', err)
+  }
+}
+
+export function apply(ctx) {
+  // Child fibers wait for optional services and activate if those services appear later.
+  ctx.inject(['webServer'], installPasteRoute)
+  ctx.inject(['skills'], installImageSkill)
 }

@@ -86,9 +86,10 @@ Key 在 [阿里云百炼](https://bailian.console.aliyun.com/) 申请。
 
 - **组合包层**（`cordis.patch.yml`）：插入 `@deepseek-ai/dsh-mcp-client` 行注册 Qwen-MM-Plugins
   的 stdio MCP server，以及本包自身的插件行。
-- **Node 半**（`index.js`）：在 `ctx.webServer` 注册粘贴接收路由（25MB 上限，同名同构图片格式），
-  在 `ctx.skills` 注册 `qwen-image-vision` 技能。两者在服务缺失时都会静默跳过，
-  因此插件也能装进没有 Web 面的 profile。
+- **Node 半**（`index.js`）：通过 `ctx.inject(['webServer'])` / `ctx.inject(['skills'])` 声明服务依赖——
+  服务就绪后再激活、服务卸载时自动清理，服务缺失时保持未激活而**不会阻塞启动**。
+  在 `ctx.webServer` 注册粘贴接收路由（25MB 上限，同名同构图片格式），
+  在 `ctx.skills` 注册 `qwen-image-vision` 技能；两项注册失败都只告警、绝不拖垮 DSH 启动。
 - **浏览器半**（`client.js`）：零依赖 client 模块，通过 `window.__ModuleLoader__.load`
   注册工厂，捕获阶段拦截输入框的图片粘贴事件。
 
@@ -157,6 +158,27 @@ dsh plugin --profile web add github:Asanagl/dsh-qwen-vision#v0.1.0
 
 插件随 Qwen-MM-Plugins 的不可变 tag（`qwen-mm-plugins-api-v1.0.2`）固定，升级视觉后端 =
 在 `cordis.patch.yml` 中改 args 里的 tag 并重启。
+
+## 🧯 事故记录：2026-08-15 启动失败
+
+最初版本在 `apply()` 里同步 `ctx.get('skills')`，但服务未就绪时返回 `undefined`；
+随后在 `readFile(...).then()` 的**异步回调**里调用 `skills.register()`，外层 `try/catch`
+捕获不到这个 Promise 回调中的异常：
+
+```
+> npx @deepseek-ai/dsh web
+dsh: fatal load failure: TypeError: Cannot read properties of undefined (reading 'register')
+    at file:///C:/Users/Asanagi/code/dsh-qwen-vision/index.js:103:16
+```
+
+修复要点（同时适用于所有 DSH 插件）：
+
+1. 服务依赖一律用 `ctx.inject(['service'], callback)` 声明，让 Cordis 等待服务就绪并在
+   服务变化时卸载/重跑；不要同步 `ctx.get('service')` 后立即使用。
+2. `inject` 回调可以是 async；把最终返回的函数（disposer）`return` 出去用于卸载清理。
+3. 异步代码的错误必须在同一条 Promise 链里 `catch`，不能留给外层同步 `try/catch`。
+4. 可选功能（路由、技能）注册失败只 `logger.warn`，绝不把整个 DSH 拖成 `fatal load failure`。
+5. 改动后跑 `npm test`（含负向用例），再重启 `dsh web` 做启动回归。
 
 ## 📄 许可证
 
