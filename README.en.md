@@ -22,6 +22,15 @@ GUI image understanding, powered by [Qwen-MM-Plugins](https://github.com/QwenLM/
 
 ## Quick start
 
+### Laziest path: let DSH install itself
+
+DSH is an agent with terminal access — paste the repo URL into the chat and let it do the work:
+
+> Please install the plugin https://github.com/Asanagl/dsh-qwen-vision for me, then remind me to
+> restart dsh web and give me the verification steps.
+
+DSH runs `dsh plugin --profile web add`, checks `uv`/`git`, and guides you through the key setup.
+
 ```sh
 dsh plugin --profile web add github:Asanagl/dsh-qwen-vision
 ```

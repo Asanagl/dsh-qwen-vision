@@ -23,6 +23,14 @@
 
 ## 🚀 快速开始
 
+### 0. 最省事：让 DSH 自己装
+
+DSH 本身就是一个能操作终端的 agent —— 直接把仓库地址发到对话框，让它自己完成安装：
+
+> 帮我安装插件 https://github.com/Asanagl/dsh-qwen-vision，装完提醒我重启 dsh web，并告诉我验证步骤
+
+DSH 会自己执行 `dsh plugin --profile web add`、检查 `uv`/`git` 依赖，并引导你配置 DashScope Key。
+
 ### 1. 安装
 
 ```sh
