@@ -43,7 +43,7 @@ dsh plugin --profile web add github:Asanagl/dsh-qwen-vision
 dsh --profile web
 ```
 
-> 建议锁定版本：`dsh plugin --profile web add github:Asanagl/dsh-qwen-vision#v0.1.0`
+> 建议锁定版本：`dsh plugin --profile web add github:Asanagl/dsh-qwen-vision#v0.1.1`
 
 ### 2. 配置 DashScope API Key
 
@@ -153,7 +153,7 @@ dsh plugin --profile web remove dsh-qwen-vision
 ## 🔄 更新
 
 ```sh
-dsh plugin --profile web add github:Asanagl/dsh-qwen-vision#v0.1.0
+dsh plugin --profile web add github:Asanagl/dsh-qwen-vision#v0.1.1
 ```
 
 插件随 Qwen-MM-Plugins 的不可变 tag（`qwen-mm-plugins-api-v1.0.2`）固定，升级视觉后端 =

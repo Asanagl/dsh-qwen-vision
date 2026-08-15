@@ -1,6 +1,6 @@
 {
   "name": "dsh-qwen-vision",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "DeepSeek Harness plugin: Qwen-MM-Plugins vision (MCP) + paste-image-into-chat + image-vision skill",
   "type": "module",
   "main": "index.js",
