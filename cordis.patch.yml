@@ -1,0 +1,22 @@
+# dsh-qwen-vision bundle layer.
+# Row 1: stdio MCP client for Qwen-MM-Plugins (vision/OCR/grounding/ASR tools).
+# Row 2: this package's dual-face plugin — Node half registers the paste
+#        receiver route + the image-vision skill; browser half (./client)
+#        adds the paste-image handler to the chat composer.
+- insert:
+    - id: mcp-qwen-mm-plugins-api
+      name: '@deepseek-ai/dsh-mcp-client'
+      config:
+        serverName: qwen-mm-plugins-api
+        transport: stdio
+        command: uvx
+        args:
+          - '--from'
+          - 'qwen-mm-plugins[api] @ git+https://github.com/QwenLM/Qwen-MM-Plugins.git@qwen-mm-plugins-api-v1.0.2'
+          - 'qwen-mm-plugins-api'
+        cwd: !!js process.cwd()
+        env:
+          PYTHONUTF8: '1'
+
+    - id: qwen-vision
+      name: dsh-qwen-vision

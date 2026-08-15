@@ -1,0 +1,44 @@
+{
+  "name": "dsh-qwen-vision",
+  "version": "0.1.0",
+  "description": "DeepSeek Harness plugin: Qwen-MM-Plugins vision (MCP) + paste-image-into-chat + image-vision skill",
+  "type": "module",
+  "main": "index.js",
+  "exports": {
+    ".": "./index.js",
+    "./client": "./client.js",
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "index.js",
+    "client.js",
+    "cordis.patch.yml",
+    "skills/**",
+    "README.md",
+    "README.zh.md",
+    "LICENSE"
+  ],
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    },
+    "client": {
+      "platform": "web",
+      "immediately": true
+    }
+  },
+  "keywords": [
+    "dsh",
+    "deepseek-harness",
+    "qwen",
+    "vision",
+    "multimodal",
+    "mcp",
+    "paste-image"
+  ],
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Asanagl/dsh-qwen-vision.git"
+  }
+}
